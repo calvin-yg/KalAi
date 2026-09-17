@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+.env
+.env.local
+# The food log and meal photos are personal data — never commit them.
+data/
+*.tsbuildinfo
+next-env.d.ts
