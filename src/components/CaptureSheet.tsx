@@ -257,10 +257,26 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
         {stage === "choose" && (
           <>
             <h3>Log a meal</h3>
-            <p className="ring-sub" style={{ marginTop: 0, marginBottom: 18 }}>
+            <p className="ring-sub" style={{ marginTop: 0, marginBottom: 14 }}>
               Photograph the whole plate from slightly above, with something familiar in
               frame — cutlery, a can, your hand — so portions can be judged.
             </p>
+
+            <div className="field">
+              <label htmlFor="photo-note">Anything it can&apos;t see? (optional)</label>
+              <input
+                id="photo-note"
+                type="text"
+                value={description}
+                placeholder="10% lean mince, no oil, fat drained"
+                onChange={(event) => setDescription(event.target.value)}
+              />
+              <div className="hint">
+                Cooking fat, cuts of meat and hidden ingredients are where estimates go
+                wrong. Whatever you type here is taken as fact over what the photo shows.
+              </div>
+            </div>
+
             <button
               className="btn primary block"
               onClick={() => cameraRef.current?.click()}
