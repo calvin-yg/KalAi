@@ -83,12 +83,19 @@ export async function POST(request: Request) {
   const description =
     typeof body.description === "string" ? body.description.slice(0, 600).trim() : "";
 
-  const correction =
-    typeof body.correction === "string" ? body.correction.slice(0, 600).trim() : "";
+  // The whole conversation, not just the newest line — otherwise the model
+  // forgets what it was told two rounds ago and asks the same question again.
+  const corrections = Array.isArray(body.corrections)
+    ? body.corrections
+        .filter((line): line is string => typeof line === "string")
+        .map((line) => line.slice(0, 600).trim())
+        .filter((line) => line.length > 0)
+        .slice(-10)
+    : [];
 
   // Rebuilt server-side from a known shape rather than trusting a blob of text,
   // so nothing the client sends can be dressed up as an instruction.
-  const previous = correction ? summarisePrevious(body.previous) : "";
+  const previous = corrections.length > 0 ? summarisePrevious(body.previous) : "";
 
   let imageBase64: string | undefined;
   let imageMediaType: SupportedMediaType | undefined;
@@ -112,14 +119,14 @@ export async function POST(request: Request) {
     imageMediaType = parsed.mediaType;
   }
 
-  if (!imageBase64 && !description && !correction) {
+  if (!imageBase64 && !description && corrections.length === 0) {
     return NextResponse.json(
       { error: "Add a photo or describe what you ate." },
       { status: 400 },
     );
   }
 
-  if (correction && !previous) {
+  if (corrections.length > 0 && !previous) {
     return NextResponse.json(
       { error: "Nothing to correct — start a new estimate instead." },
       { status: 400 },
@@ -131,7 +138,7 @@ export async function POST(request: Request) {
       imageBase64,
       imageMediaType,
       description,
-      ...(correction ? { correction, previous } : {}),
+      ...(corrections.length > 0 ? { corrections, previous } : {}),
     });
     if (!analysis.isFood || analysis.items.length === 0) {
       return NextResponse.json(

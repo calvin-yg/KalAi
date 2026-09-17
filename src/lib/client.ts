@@ -107,7 +107,7 @@ export const api = {
   analyse: (input: {
     image?: string;
     description?: string;
-    correction?: string;
+    corrections?: string[];
     previous?: unknown;
   }) =>
     request<{ analysis: Analysis }>("/api/analyse", {

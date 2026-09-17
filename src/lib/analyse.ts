@@ -122,8 +122,8 @@ export interface AnalyseInput {
   imageMediaType?: "image/jpeg" | "image/png" | "image/webp";
   /** A written description, used alone or as a hint alongside the photo. */
   description?: string;
-  /** What the person said after seeing the first estimate. */
-  correction?: string;
+  /** Everything the person has told us about this meal, oldest first. */
+  corrections?: string[];
   /** The estimate being corrected, summarised for the model to revise. */
   previous?: string;
 }
@@ -142,10 +142,13 @@ export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
     });
   }
 
-  if (input.correction && input.previous) {
+  const corrections = input.corrections?.filter((line) => line.trim().length > 0) ?? [];
+
+  if (corrections.length > 0 && input.previous) {
+    const told = corrections.map((line) => `- ${line}`).join("\n");
     content.push({
       type: "text",
-      text: `You estimated this meal as:\n\n${input.previous}\n\nThe person who cooked and ate it has now told you:\n\n"${input.correction}"\n\nRe-estimate the meal taking that as fact. It outranks anything you inferred from the photo — if they say there was no oil, remove the oil; if they give a weight, make your portions add up to it; if they name a cut or fat percentage, use its real composition rather than a generic one. Carry over anything their answer doesn't touch, and don't quietly hedge back toward your first estimate. Your confidence and your range should both tighten for whatever they have now settled, and your questions should no longer ask what they have already answered.`,
+      text: `You estimated this meal as:\n\n${input.previous}\n\nThe person who cooked and ate it has told you, in order:\n\n${told}\n\nRe-estimate the meal taking all of that as fact — every line, not just the last one. It outranks anything you inferred from the photo: if they say there was no oil, remove the oil; if they give a weight, make your portions add up to it; if they name a cut or fat percentage, use its real composition rather than a generic one; if they describe a batch, work out this serve's share of it.\n\nDo not ask again about anything in that list, even obliquely, and do not drift back toward your earlier assumptions on those points — they are settled. Ask only about what genuinely remains unknown, and return an empty list of questions when nothing important is left. Carry over anything their answers don't touch. Your confidence and your range should both tighten for whatever they have now settled.`,
     });
   } else if (input.imageBase64 && input.description) {
     content.push({
@@ -159,7 +162,7 @@ export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
       type: "text",
       text: `There is no photo. Estimate this meal from the description alone: "${input.description}". Where the portion is unstated, assume a typical adult serve and say so in the notes.`,
     });
-  } else if (!input.correction) {
+  } else if (corrections.length === 0) {
     throw new AnalysisError("Provide a photo or a description.", 400);
   }
 

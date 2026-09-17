@@ -94,6 +94,8 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   const [meal, setMeal] = useState<MealType>(mealForTime());
   const [saving, setSaving] = useState(false);
   const [correction, setCorrection] = useState("");
+  /** Everything told to the model about this meal so far, oldest first. */
+  const [answers, setAnswers] = useState<string[]>([]);
   const [product, setProduct] = useState<Product | null>(null);
   const [grams, setGrams] = useState(100);
 
@@ -116,7 +118,7 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   async function runAnalysis(input: {
     image?: string;
     description?: string;
-    correction?: string;
+    corrections?: string[];
     previous?: unknown;
   }) {
     setStage("analysing");
@@ -134,13 +136,15 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
         })),
       );
       setCorrection("");
+      // A fresh photo starts a new conversation; a revision keeps the old one.
+      setAnswers(input.corrections ?? []);
       setStage("review");
     } catch (caught) {
       if (!alive.current) return;
       setError(caught instanceof Error ? caught.message : "That didn't work.");
       // A failed revision must go back to the estimate it was revising, not to
       // the start — the person would otherwise lose a good estimate to a typo.
-      setStage(input.correction ? "review" : input.image ? "choose" : "describe");
+      setStage(input.corrections?.length ? "review" : input.image ? "choose" : "describe");
     }
   }
 
@@ -205,6 +209,16 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
     } catch {
       setError("Could not read that photo. Try another one.");
     }
+  }
+
+  function submitCorrection() {
+    const trimmed = correction.trim();
+    if (trimmed.length < 2 || !analysis) return;
+    void runAnalysis({
+      image: photo ?? undefined,
+      corrections: [...answers, trimmed],
+      previous: analysis,
+    });
   }
 
   function adjust(id: string, delta: number) {
@@ -574,33 +588,31 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
                 </ul>
               )}
 
-              <input
+              <textarea
                 id="correction"
-                type="text"
+                rows={3}
                 value={correction}
-                placeholder="10% lean mince, no oil, 406 g on the plate"
+                placeholder={
+                  "10% fat mince, drained the fat off\n800 g raw split 4.5 ways\nfull 420 g tin of corn in the batch"
+                }
                 onChange={(event) => setCorrection(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && correction.trim().length > 1) {
-                    void runAnalysis({
-                      image: photo ?? undefined,
-                      correction: correction.trim(),
-                      previous: analysis,
-                    });
+                  // Enter sends; Shift+Enter starts a new line, so several
+                  // questions can be answered in one go.
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    submitCorrection();
                   }
                 }}
               />
+              <div className="hint">
+                Answer as many as you like — Shift+Enter for a new line, Enter to send.
+              </div>
               <button
                 className="btn block"
                 style={{ marginTop: 10 }}
                 disabled={correction.trim().length < 2}
-                onClick={() =>
-                  void runAnalysis({
-                    image: photo ?? undefined,
-                    correction: correction.trim(),
-                    previous: analysis,
-                  })
-                }
+                onClick={submitCorrection}
               >
                 Update the estimate
               </button>
