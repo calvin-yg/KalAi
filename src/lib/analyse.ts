@@ -77,9 +77,12 @@ let cachedClient: Anthropic | null = null;
 
 function client(): Anthropic {
   // Resolves ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile.
-  // The SDK would otherwise wait ten minutes; the route's own ceiling is two,
-  // and a phone waiting on a spinner needs to fail long before either.
-  cachedClient ??= new Anthropic({ timeout: 90_000, maxRetries: 1 });
+  //
+  // The budget here is the whole wait a person spends staring at a spinner, not
+  // the length of one attempt: the SDK retries, so the timeout must be under
+  // half the route's 120s ceiling or a stalled call blows through it. 55s twice
+  // lands at ~110s worst case, and a genuine analysis finishes well inside one.
+  cachedClient ??= new Anthropic({ timeout: 55_000, maxRetries: 1 });
   return cachedClient;
 }
 
