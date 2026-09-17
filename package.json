@@ -9,7 +9,8 @@
     "start": "next start -p 3000",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test test/*.test.mjs"
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "eval": "node --env-file-if-exists=.env.local --experimental-strip-types eval/run-accuracy.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
@@ -24,6 +25,7 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "sharp": "^0.35.4",
     "typescript": "^5.7.0"
   }
 }

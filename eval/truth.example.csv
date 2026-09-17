@@ -1,0 +1,10 @@
+meal_id,photo,ingredient,grams,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,tags,note
+chicken-rice-01,chicken-rice-01.jpg,Chicken thigh fillet (raw),180,177,18.6,0,11.3,home|plated,Weighed raw before grilling
+chicken-rice-01,,Jasmine rice (cooked),220,130,2.7,28.2,0.3,,
+chicken-rice-01,,Olive oil,12,884,0,0,100,,Used in the pan
+chicken-rice-01,,Broccoli (steamed),90,35,2.4,7.2,0.4,,
+porridge-02,porridge-02.jpg,Rolled oats (dry),60,379,13.2,67.7,6.5,home|bowl,
+porridge-02,,Full cream milk,250,64,3.3,4.7,3.6,,
+porridge-02,,Honey,15,304,0.3,82.4,0,,
+pub-parma-03,pub-parma-03.jpg,Chicken parmigiana (estimated from menu),400,215,17,14,10,restaurant|plated,Truth is weaker here — see the README
+pub-parma-03,,Chips,200,312,3.4,41,14.6,,

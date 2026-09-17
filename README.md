@@ -141,8 +141,9 @@ src/app/api/profile    GET/POST profile and targets, PUT a weigh-in
 src/app/page.tsx       Day dashboard
 src/app/onboarding     Setup and settings, with live target preview
 src/components/        Ring, CaptureSheet, BarcodeScanner, EntrySheet
-test/                  Product-parsing tests, plus a barcode video generator for
-                       testing the scanner without a real camera
+eval/                  Accuracy harness — truth sheet, runner, scoring
+test/                  Unit tests, plus a barcode video generator for testing
+                       the scanner without a real camera
 ```
 
 ## Hardening
@@ -166,10 +167,33 @@ metered API, so the routes assume they can be reached by someone who isn't you:
 - **`TZ=Australia/Melbourne`** in the container. Entries are keyed by local calendar date,
   and a UTC container would roll the day over mid-afternoon.
 
+## Measuring the accuracy
+
+`eval/` holds a harness that answers the only question that matters about the
+photo path: how far are the estimates from what was actually eaten?
+
+You weigh and photograph twenty-odd normal meals, record the ingredients in
+`eval/truth.csv`, and run:
+
+```bash
+npm run eval -- --dry-run   # check the setup, no API calls, no cost
+npm run eval -- --yes       # the real thing, cost estimated first
+```
+
+It reports bias (a consistent lean, the number that actually matters), typical
+error, which kinds of meals it handles worst, whether the confidence badges mean
+anything, and — with `--runs 3` — how much the same photo varies between runs.
+See `eval/README.md`. Until you run it, the accuracy of the photo estimates is
+unknown; the figures are a model's judgement, not a measurement.
+
 ## Known limits
 
 - Estimates are estimates. Portion depth is invisible in a photo, and hidden oils and
   sugars are inferred rather than seen. Treat it as a guide, not a measurement.
+- **The photo estimates have never been measured.** They come from a model reading a
+  picture, not a database, and photographs hide the things that matter most: portion
+  depth, and the oil a dish was cooked in. Run the harness in `eval/` before trusting
+  them, and treat the bathroom scales as the ground truth over any daily total.
 - Barcode scanning is verified end to end against a synthetic camera feed, but never
   against a real phone camera in real lighting. Expect to need a steady hand; the manual
   digit entry is there for when it struggles.

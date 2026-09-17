@@ -7,3 +7,9 @@ out
 data/
 *.tsbuildinfo
 next-env.d.ts
+
+# Your own meal photos and measurements — personal, and large.
+eval/photos/*
+!eval/photos/.gitkeep
+eval/truth.csv
+eval/results/
