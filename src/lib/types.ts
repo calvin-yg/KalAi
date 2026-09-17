@@ -59,6 +59,12 @@ export interface Entry {
   totals: Macros;
   /** 1-10 nutritional quality score from the model. */
   healthScore: number;
+  /**
+   * Plausible calorie range for the meal as estimated, scaled by any portion
+   * adjustment. Absent on barcode entries, where the label figures are exact,
+   * and on entries logged before ranges existed.
+   */
+  range?: { low: number; high: number };
   notes: string;
   /**
    * Filename of the stored photo under the photos directory, or null for meals

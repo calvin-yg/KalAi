@@ -118,3 +118,28 @@ test("reports run-to-run spread on the same photo", () => {
   // A single run has no spread to report.
   assert.equal(variance.m2, undefined);
 });
+
+test("range coverage tells an honest range from a reassuring one", async () => {
+  const { rangeCoverage } = await import("../eval/metrics.mjs");
+
+  const scored = (id, actual, low, high) => {
+    const s = scoreMeal(meal(id, actual), { calories: actual, protein: 10, carbs: 10, fat: 10 });
+    s.range = { low, high };
+    return s;
+  };
+
+  // Three of four truths inside the stated range.
+  const coverage = rangeCoverage([
+    scored("a", 500, 450, 600),
+    scored("b", 500, 450, 600),
+    scored("c", 500, 450, 600),
+    scored("d", 500, 200, 300),
+  ]);
+  assert.equal(coverage.meals, 4);
+  assert.equal(coverage.coveragePercent, 75);
+  assert.equal(coverage.missed.length, 1);
+  assert.equal(coverage.missed[0].id, "d");
+
+  // A range with no width is not a range and shouldn't be counted.
+  assert.equal(rangeCoverage([scored("e", 500, 500, 500)]), null);
+});

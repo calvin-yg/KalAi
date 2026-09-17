@@ -42,6 +42,16 @@ const AnalysisSchema = z.object({
     .enum(["breakfast", "lunch", "dinner", "snack"])
     .describe("Which meal this most likely is, judging by the food itself."),
   items: z.array(FoodItemSchema).describe("One entry per distinct food or drink."),
+  caloriesLow: z
+    .number()
+    .describe(
+      "Low end of the plausible range for the whole meal, in kilocalories. Be honest: this should be roughly where you'd expect the true value to fall about one time in ten.",
+    ),
+  caloriesHigh: z
+    .number()
+    .describe(
+      "High end of the plausible range for the whole meal, in kilocalories. A mixed dish where portion depth is hidden deserves a wide range; a plated single serve deserves a narrow one.",
+    ),
   healthScore: z
     .number()
     .describe("Overall nutritional quality from 1 (poor) to 10 (excellent)."),
@@ -66,6 +76,11 @@ How to estimate:
 - Use Australian foods and serving conventions: a standard slice of bread is about 35 g, a flat white is about 250 mL, a schooner is 425 mL, a Weet-Bix is 15 g.
 - Energy values are kilocalories for the whole portion shown, not per 100 g.
 - Each item's macros must be physically consistent with its calories: protein and carbohydrate are 4 kcal per gram, fat is 9 kcal per gram, alcohol is 7. The sum of the macros should land within about 10% of the stated calories.
+
+On the range:
+- caloriesLow and caloriesHigh bracket the whole meal, and they are the honest width of your uncertainty, not a polite gesture. If the true value would surprise you outside 470-650, say 470 and 650.
+- Width should track what the photo actually hides. A plated single serve in good light might run plus or minus 15%. A stacked bowl, a casserole, or anything whose depth you cannot see should be far wider — plus or minus 35% or more.
+- The range is never a way to hedge a guess you could have made properly. Narrow it by reasoning about the plate, not by wishing.
 
 On confidence:
 - Be honest. A clearly lit, plated, single-serve meal might reach 0.85. A mixed casserole, a stacked plate, or anything where portion depth is hidden should sit near 0.4-0.6.
@@ -199,8 +214,17 @@ const clamp = (n: number, lo: number, hi: number) =>
 
 /** Guard against a plausible-looking but out-of-range estimate reaching the UI. */
 function normalise(analysis: Analysis): Analysis {
+  const total = analysis.items.reduce((sum, item) => sum + (item.calories || 0), 0);
+
+  // A range that doesn't contain its own point estimate would be nonsense on
+  // screen, so widen it rather than show the two disagreeing.
+  const low = Math.round(clamp(Math.min(analysis.caloriesLow, total), 0, 10000));
+  const high = Math.round(clamp(Math.max(analysis.caloriesHigh, total), 0, 20000));
+
   return {
     ...analysis,
+    caloriesLow: low,
+    caloriesHigh: high,
     healthScore: Math.round(clamp(analysis.healthScore, 1, 10)),
     items: analysis.items.map((item) => ({
       ...item,

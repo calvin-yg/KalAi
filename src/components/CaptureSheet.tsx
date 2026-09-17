@@ -216,6 +216,22 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   const totals = sumMacros(kept);
   const touched = drafts.some((item) => item.factor !== 1) || kept.length !== drafts.length;
 
+  /**
+   * The model's range describes the meal it was shown, so adjusting portions has
+   * to move the range with the total — otherwise a halved plate keeps the range
+   * of a full one.
+   */
+  const originalCalories = analysis
+    ? analysis.items.reduce((sum, item) => sum + item.calories, 0)
+    : 0;
+  const rangeFactor = originalCalories > 0 ? totals.calories / originalCalories : 1;
+  const range = analysis
+    ? {
+        low: Math.round(analysis.caloriesLow * rangeFactor),
+        high: Math.round(analysis.caloriesHigh * rangeFactor),
+      }
+    : null;
+
   async function save() {
     if (!analysis || kept.length === 0) return;
     setSaving(true);
@@ -230,6 +246,7 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
         notes: analysis.notes,
         photo,
         edited: touched,
+        ...(range ? { range } : {}),
       });
       onSaved(entry);
     } catch (caught) {
@@ -447,6 +464,14 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
               {Math.round(totals.calories)} kcal · {Math.round(totals.protein)}g protein ·{" "}
               {Math.round(totals.carbs)}g carbs · {Math.round(totals.fat)}g fat
             </div>
+            {range && range.high > range.low && (
+              <div className="range">
+                <span className="range-label">likely {range.low}–{range.high} kcal</span>
+                <span className="range-hint">
+                  how much a photo can&apos;t pin down for this meal
+                </span>
+              </div>
+            )}
 
             <div className="chips" style={{ margin: "16px 0" }}>
               {MEALS.map((option) => (

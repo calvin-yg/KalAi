@@ -228,3 +228,33 @@ export function runVariance(perRunCalories) {
   }
   return results;
 }
+
+/**
+ * How often the true calories fell inside the range the app displayed.
+ *
+ * This is what makes the range worth showing. A range that contains the truth
+ * nine times in ten is doing its job; one that contains it half the time is
+ * false reassurance, and one that contains it every single time is so wide it
+ * says nothing. Roughly 80-90% is the target.
+ */
+export function rangeCoverage(scores) {
+  const withRange = scores.filter((s) => s.range && s.range.high > s.range.low);
+  if (withRange.length === 0) return null;
+
+  const inside = withRange.filter(
+    (s) => s.actual.calories >= s.range.low && s.actual.calories <= s.range.high,
+  );
+
+  const widths = withRange.map((s) =>
+    s.actual.calories === 0 ? 0 : ((s.range.high - s.range.low) / s.actual.calories) * 100,
+  );
+
+  return {
+    meals: withRange.length,
+    coveragePercent: (inside.length / withRange.length) * 100,
+    meanWidthPercent: widths.reduce((a, b) => a + b, 0) / widths.length,
+    missed: withRange
+      .filter((s) => !inside.includes(s))
+      .map((s) => ({ id: s.id, actual: s.actual.calories, range: s.range })),
+  };
+}

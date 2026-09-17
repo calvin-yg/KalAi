@@ -15,6 +15,7 @@ import {
   buildTruth,
   confidenceCalibration,
   parseCsv,
+  rangeCoverage,
   runVariance,
   scoreMeal,
   summarise,
@@ -73,6 +74,8 @@ function fakeAnalysis(meal, run) {
   const scale = (value) => Math.round(value * lean);
   return {
     isFood: true,
+    caloriesLow: Math.round(meal.actual.calories * 0.75),
+    caloriesHigh: Math.round(meal.actual.calories * 1.05),
     title: `${meal.id} (dry run)`,
     meal: "lunch",
     healthScore: 6,
@@ -188,6 +191,9 @@ async function main() {
           analysis.items.reduce((sum, item) => sum + item.confidence, 0) /
           Math.max(1, analysis.items.length);
         score.title = analysis.title;
+        if (analysis.caloriesHigh > analysis.caloriesLow) {
+          score.range = { low: analysis.caloriesLow, high: analysis.caloriesHigh };
+        }
         scores.push(score);
       }
     }
@@ -221,6 +227,7 @@ async function main() {
     fat: summarise(scores, "fat"),
     byTag: summariseByTag(scores),
     confidence: confidenceCalibration(scores),
+    range: rangeCoverage(scores),
     variance: RUNS > 1 ? runVariance(perRunCalories) : null,
     scores,
     failures,
@@ -255,6 +262,20 @@ async function main() {
         stats ? `${stats.meals} meals, typical ${stats.meanAbsolute.toFixed(1)}%` : "no meals"
       }`,
     );
+  }
+
+  if (report.range) {
+    console.log("\n  Are the displayed ranges honest?");
+    console.log(
+      `    truth landed inside the range ${report.range.coveragePercent.toFixed(0)}% of the time ` +
+        `(aim for 80-90%)`,
+    );
+    console.log(
+      `    average range width: ${report.range.meanWidthPercent.toFixed(0)}% of the true calories`,
+    );
+    for (const miss of report.range.missed) {
+      console.log(`    missed: ${miss.id} — truth ${miss.actual}, said ${miss.range.low}-${miss.range.high}`);
+    }
   }
 
   if (report.variance) {

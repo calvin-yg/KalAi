@@ -117,6 +117,16 @@ export async function POST(request: Request) {
     if (base64) photo = await savePhoto(id, base64);
   }
 
+  // Only meaningful when it brackets the total; anything else is dropped.
+  const rawRange = (body.range ?? {}) as Record<string, unknown>;
+  const low = Math.max(0, Math.round(num(rawRange.low, -1)));
+  const high = Math.max(0, Math.round(num(rawRange.high, -1)));
+  const totals = roundMacros(sumMacros(items));
+  const range =
+    num(rawRange.low, -1) >= 0 && high >= low && low <= totals.calories && high >= totals.calories
+      ? { low, high }
+      : undefined;
+
   const entry: Entry = {
     id,
     date: /^\d{4}-\d{2}-\d{2}$/.test(str(body.date)) ? str(body.date) : toDateKey(),
@@ -124,8 +134,9 @@ export async function POST(request: Request) {
     meal,
     title: str(body.title, "Meal").slice(0, 140),
     items,
-    totals: roundMacros(sumMacros(items)),
+    totals,
     healthScore: Math.min(10, Math.max(1, Math.round(num(body.healthScore, 5)))),
+    ...(range ? { range } : {}),
     notes: str(body.notes).slice(0, 800),
     photo,
     source: barcode ? "barcode" : photo ? "photo" : "text",

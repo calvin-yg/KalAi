@@ -267,7 +267,11 @@ export default function Onboarding() {
             }
           />
           <div className="hint">
-            Leave this blank unless a dietitian or doctor has given you a specific number.
+            Leave blank unless you have a reason. This is also where a safety margin
+            belongs: photo estimates carry real uncertainty, so if you&apos;d rather err on
+            the cautious side, set a target a little under the calculated one. Better to
+            adjust the goalposts than to have the food log quietly tell you something
+            other than what you ate.
           </div>
         </div>
       </section>

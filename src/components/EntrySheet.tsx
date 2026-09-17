@@ -52,6 +52,15 @@ export function EntrySheet({ entry, onClose, onDeleted }: EntrySheetProps) {
           {entry.edited ? " · portions adjusted" : ""}
         </div>
 
+        {entry.range && entry.range.high > entry.range.low && (
+          <div className="range">
+            <span className="range-label">
+              likely {entry.range.low}–{entry.range.high} kcal
+            </span>
+            <span className="range-hint">estimated from the photo, not measured</span>
+          </div>
+        )}
+
         <div className="macro-grid">
           {(
             [
