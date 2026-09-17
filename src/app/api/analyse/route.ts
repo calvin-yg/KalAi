@@ -35,6 +35,38 @@ function parseDataUrl(
   return { mediaType: MEDIA_TYPES[match[1] as keyof typeof MEDIA_TYPES], data: match[2] };
 }
 
+const text = (value: unknown, max: number): string =>
+  typeof value === "string" ? value.slice(0, max) : "";
+
+const round = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+};
+
+/** Render a prior estimate as plain lines, taking only the fields we know. */
+function summarisePrevious(raw: unknown): string {
+  const previous = (raw ?? {}) as Record<string, unknown>;
+  const items = Array.isArray(previous.items) ? previous.items.slice(0, 20) : [];
+  if (items.length === 0) return "";
+
+  const lines = items.map((entry) => {
+    const item = (entry ?? {}) as Record<string, unknown>;
+    return (
+      `- ${text(item.name, 80) || "item"}: ${round(item.grams)} g, ` +
+      `${round(item.calories)} kcal, protein ${round(item.protein)} g, ` +
+      `carbs ${round(item.carbs)} g, fat ${round(item.fat)} g`
+    );
+  });
+
+  const title = text(previous.title, 140);
+  const total = items.reduce(
+    (sum, entry) => sum + round((entry as Record<string, unknown>).calories),
+    0,
+  );
+
+  return `${title || "Meal"} — ${total} kcal total\n${lines.join("\n")}`;
+}
+
 export async function POST(request: Request) {
   const wait = limiter.check(clientKey(request));
   if (wait !== null) {
@@ -50,6 +82,13 @@ export async function POST(request: Request) {
 
   const description =
     typeof body.description === "string" ? body.description.slice(0, 600).trim() : "";
+
+  const correction =
+    typeof body.correction === "string" ? body.correction.slice(0, 600).trim() : "";
+
+  // Rebuilt server-side from a known shape rather than trusting a blob of text,
+  // so nothing the client sends can be dressed up as an instruction.
+  const previous = correction ? summarisePrevious(body.previous) : "";
 
   let imageBase64: string | undefined;
   let imageMediaType: SupportedMediaType | undefined;
@@ -73,15 +112,27 @@ export async function POST(request: Request) {
     imageMediaType = parsed.mediaType;
   }
 
-  if (!imageBase64 && !description) {
+  if (!imageBase64 && !description && !correction) {
     return NextResponse.json(
       { error: "Add a photo or describe what you ate." },
       { status: 400 },
     );
   }
 
+  if (correction && !previous) {
+    return NextResponse.json(
+      { error: "Nothing to correct — start a new estimate instead." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const analysis = await analyseMeal({ imageBase64, imageMediaType, description });
+    const analysis = await analyseMeal({
+      imageBase64,
+      imageMediaType,
+      description,
+      ...(correction ? { correction, previous } : {}),
+    });
     if (!analysis.isFood || analysis.items.length === 0) {
       return NextResponse.json(
         {

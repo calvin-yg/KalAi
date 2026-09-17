@@ -93,6 +93,7 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [meal, setMeal] = useState<MealType>(mealForTime());
   const [saving, setSaving] = useState(false);
+  const [correction, setCorrection] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
   const [grams, setGrams] = useState(100);
 
@@ -112,7 +113,12 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
     };
   }, []);
 
-  async function runAnalysis(input: { image?: string; description?: string }) {
+  async function runAnalysis(input: {
+    image?: string;
+    description?: string;
+    correction?: string;
+    previous?: unknown;
+  }) {
     setStage("analysing");
     setError(null);
     try {
@@ -127,11 +133,14 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
           factor: 1,
         })),
       );
+      setCorrection("");
       setStage("review");
     } catch (caught) {
       if (!alive.current) return;
       setError(caught instanceof Error ? caught.message : "That didn't work.");
-      setStage(input.image ? "choose" : "describe");
+      // A failed revision must go back to the estimate it was revising, not to
+      // the start — the person would otherwise lose a good estimate to a typo.
+      setStage(input.correction ? "review" : input.image ? "choose" : "describe");
     }
   }
 
@@ -227,8 +236,16 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   const rangeFactor = originalCalories > 0 ? totals.calories / originalCalories : 1;
   const range = analysis
     ? {
-        low: Math.round(analysis.caloriesLow * rangeFactor),
-        high: Math.round(analysis.caloriesHigh * rangeFactor),
+        // Never show a range that excludes the figure printed next to it. The
+        // server keeps these consistent, but the screen shouldn't depend on that.
+        low: Math.min(
+          Math.round(analysis.caloriesLow * rangeFactor),
+          Math.round(totals.calories),
+        ),
+        high: Math.max(
+          Math.round(analysis.caloriesHigh * rangeFactor),
+          Math.round(totals.calories),
+        ),
       }
     : null;
 
@@ -541,6 +558,53 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
                 {analysis.notes}
               </div>
             )}
+
+            <div className="field" style={{ marginTop: 14 }}>
+              <label htmlFor="correction">
+                {analysis.questions.length > 0
+                  ? "It would estimate better if it knew:"
+                  : "Anything it got wrong?"}
+              </label>
+
+              {analysis.questions.length > 0 && (
+                <ul className="questions">
+                  {analysis.questions.map((question) => (
+                    <li key={question}>{question}</li>
+                  ))}
+                </ul>
+              )}
+
+              <input
+                id="correction"
+                type="text"
+                value={correction}
+                placeholder="10% lean mince, no oil, 406 g on the plate"
+                onChange={(event) => setCorrection(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && correction.trim().length > 1) {
+                    void runAnalysis({
+                      image: photo ?? undefined,
+                      correction: correction.trim(),
+                      previous: analysis,
+                    });
+                  }
+                }}
+              />
+              <button
+                className="btn block"
+                style={{ marginTop: 10 }}
+                disabled={correction.trim().length < 2}
+                onClick={() =>
+                  void runAnalysis({
+                    image: photo ?? undefined,
+                    correction: correction.trim(),
+                    previous: analysis,
+                  })
+                }
+              >
+                Update the estimate
+              </button>
+            </div>
 
             <div className="row" style={{ marginTop: 6 }}>
               <button className="btn ghost" onClick={onClose} disabled={saving}>

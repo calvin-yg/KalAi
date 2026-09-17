@@ -60,6 +60,11 @@ const AnalysisSchema = z.object({
     .describe(
       "One or two plain-English sentences: what drove the estimate, and what you were unsure about.",
     ),
+  questions: z
+    .array(z.string())
+    .describe(
+      "Up to three short questions whose answers would most improve this estimate — the things only the person who cooked it can tell you. Ask about what actually moves the number: fat content of the meat, oil used, portion weight, whether something is hidden under the top layer. Ask nothing you could reasonably work out from the photo. An empty list is correct when the photo already tells you enough.",
+    ),
 });
 
 export type Analysis = z.infer<typeof AnalysisSchema>;
@@ -117,6 +122,10 @@ export interface AnalyseInput {
   imageMediaType?: "image/jpeg" | "image/png" | "image/webp";
   /** A written description, used alone or as a hint alongside the photo. */
   description?: string;
+  /** What the person said after seeing the first estimate. */
+  correction?: string;
+  /** The estimate being corrected, summarised for the model to revise. */
+  previous?: string;
 }
 
 export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
@@ -133,7 +142,12 @@ export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
     });
   }
 
-  if (input.imageBase64 && input.description) {
+  if (input.correction && input.previous) {
+    content.push({
+      type: "text",
+      text: `You estimated this meal as:\n\n${input.previous}\n\nThe person who cooked and ate it has now told you:\n\n"${input.correction}"\n\nRe-estimate the meal taking that as fact. It outranks anything you inferred from the photo — if they say there was no oil, remove the oil; if they give a weight, make your portions add up to it; if they name a cut or fat percentage, use its real composition rather than a generic one. Carry over anything their answer doesn't touch, and don't quietly hedge back toward your first estimate. Your confidence and your range should both tighten for whatever they have now settled, and your questions should no longer ask what they have already answered.`,
+    });
+  } else if (input.imageBase64 && input.description) {
     content.push({
       type: "text",
       text: `Analyse this meal. The person adds: "${input.description}". Treat that as ground truth where it conflicts with what you see.`,
@@ -145,7 +159,7 @@ export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
       type: "text",
       text: `There is no photo. Estimate this meal from the description alone: "${input.description}". Where the portion is unstated, assume a typical adult serve and say so in the notes.`,
     });
-  } else {
+  } else if (!input.correction) {
     throw new AnalysisError("Provide a photo or a description.", 400);
   }
 

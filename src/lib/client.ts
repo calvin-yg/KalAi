@@ -104,7 +104,12 @@ export const api = {
       method: "DELETE",
     }),
 
-  analyse: (input: { image?: string; description?: string }) =>
+  analyse: (input: {
+    image?: string;
+    description?: string;
+    correction?: string;
+    previous?: unknown;
+  }) =>
     request<{ analysis: Analysis }>("/api/analyse", {
       method: "POST",
       body: JSON.stringify(input),
