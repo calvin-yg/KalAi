@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { readUser, recordWeighIn, saveProfile } from "@/lib/store";
 import { userIdFrom } from "@/lib/session";
+import { readJson } from "@/lib/http";
+import { errorResponse } from "@/lib/responses";
 import { ACTIVITY_FACTORS, dailyTargets, toDateKey } from "@/lib/nutrition";
 import type { ActivityLevel, GoalType, Profile, Sex } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+const MAX_BODY_BYTES = 64 * 1024;
 
 const SEXES: Sex[] = ["female", "male"];
 const GOALS: GoalType[] = ["lose", "maintain", "gain"];
@@ -31,9 +35,9 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    return errorResponse(error, "Could not read that request.");
   }
 
   const existing = (await readUser(userId)).profile;
@@ -87,9 +91,9 @@ export async function PUT(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    return errorResponse(error, "Could not read that request.");
   }
   const weightKg = clamp(Number(body.weightKg), 30, 300, 0);
   if (!weightKg) {

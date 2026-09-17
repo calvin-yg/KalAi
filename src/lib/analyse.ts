@@ -77,7 +77,9 @@ let cachedClient: Anthropic | null = null;
 
 function client(): Anthropic {
   // Resolves ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or an `ant auth login` profile.
-  cachedClient ??= new Anthropic();
+  // The SDK would otherwise wait ten minutes; the route's own ceiling is two,
+  // and a phone waiting on a spinner needs to fail long before either.
+  cachedClient ??= new Anthropic({ timeout: 90_000, maxRetries: 1 });
   return cachedClient;
 }
 
@@ -163,6 +165,9 @@ export async function analyseMeal(input: AnalyseInput): Promise<Analysis> {
     }
     if (error instanceof Anthropic.RateLimitError) {
       throw new AnalysisError("Rate limited by the API — try again in a moment.", 429);
+    }
+    if (error instanceof Anthropic.APIConnectionTimeoutError) {
+      throw new AnalysisError("That took too long — try again with a clearer photo.", 504);
     }
     if (error instanceof Anthropic.APIConnectionError) {
       throw new AnalysisError("Could not reach the Anthropic API.", 503);

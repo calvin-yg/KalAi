@@ -145,6 +145,27 @@ test/                  Product-parsing tests, plus a barcode video generator for
                        testing the scanner without a real camera
 ```
 
+## Hardening
+
+The app is small, but it sits on a public URL holding personal data and calling a
+metered API, so the routes assume they can be reached by someone who isn't you:
+
+- **Size caps.** Request bodies are measured as they're read, not trusted from
+  `Content-Length`, and a photo over 5 MB is dropped rather than written to the volume.
+  Disk is the one resource a small deployment can't recover from on its own.
+- **Rate limits.** The analysis route allows 20 calls per 5 minutes per client — far
+  above two people photographing meals, far below a loop burning API credit. The passcode
+  route allows 10 attempts per 15 minutes, which makes a short shared code impractical to
+  guess. Both are in-process, which is another reason to run a single machine.
+- **Constant-time passcode comparison**, so neither the code nor its length leaks through
+  response timing.
+- **Windowed loading.** The dashboard fetches a 30-day window rather than the whole log,
+  and only refetches when you page outside it. A year of two people logging is thousands
+  of entries; sending all of them to render seven days would get slow on mobile data.
+- **An error boundary**, so a render crash shows a way back instead of a white screen.
+- **`TZ=Australia/Melbourne`** in the container. Entries are keyed by local calendar date,
+  and a UTC container would roll the day over mid-afternoon.
+
 ## Known limits
 
 - Estimates are estimates. Portion depth is invisible in a photo, and hidden oils and

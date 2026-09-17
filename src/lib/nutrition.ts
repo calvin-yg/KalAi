@@ -153,8 +153,8 @@ export function toKilojoules(calories: number): number {
 }
 
 /** Consecutive days up to today that have at least one logged meal. */
-export function loggingStreak(entries: Entry[]): number {
-  const logged = new Set(entries.map((e) => e.date));
+export function loggingStreak(loggedDates: string[]): number {
+  const logged = new Set(loggedDates);
   let streak = 0;
   let cursor = toDateKey();
   // Today not being logged yet shouldn't break a streak before the day is out.

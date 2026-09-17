@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { AnalysisError, analyseMeal } from "@/lib/analyse";
+import { RateLimiter, clientKey, readJson } from "@/lib/http";
+import { errorResponse, tooManyRequests } from "@/lib/responses";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+// A downscaled photo is ~200 KB of base64; 8 MB leaves generous headroom.
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Every call here costs real money at the API. Two people photographing meals
+ * will never come close to 20 in 5 minutes; a loop or a stranger would.
+ */
+const limiter = new RateLimiter(20, 5 * 60 * 1000);
 
 const MEDIA_TYPES = {
   jpeg: "image/jpeg",
@@ -25,11 +36,16 @@ function parseDataUrl(
 }
 
 export async function POST(request: Request) {
-  let body: { image?: unknown; description?: unknown };
+  const wait = limiter.check(clientKey(request));
+  if (wait !== null) {
+    return tooManyRequests(wait, "That's a lot of meals at once — try again shortly.");
+  }
+
+  let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    return errorResponse(error, "Could not read that request.");
   }
 
   const description =
@@ -80,7 +96,6 @@ export async function POST(request: Request) {
     if (error instanceof AnalysisError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("analyse failed", error);
-    return NextResponse.json({ error: "Something went wrong analysing that meal." }, { status: 500 });
+    return errorResponse(error, "Something went wrong analysing that meal.");
   }
 }

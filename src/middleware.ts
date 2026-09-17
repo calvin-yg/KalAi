@@ -1,19 +1,31 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { GATE_COOKIE, configuredPasscode, passcodeToken } from "@/lib/gate";
+import { GATE_COOKIE, configuredPasscode, passcodeToken, tokenMatches } from "@/lib/gate";
 
 /** Paths that must stay reachable so the gate itself can be used. */
 const OPEN_PATHS = ["/login", "/api/login"];
 
+let warnedAboutOpenDeployment = false;
+
 export async function middleware(request: NextRequest) {
   const passcode = configuredPasscode();
-  if (!passcode) return NextResponse.next();
+  if (!passcode) {
+    // Easy to forget, and the failure mode is silent: a personal food log
+    // readable and writable by anyone who finds the URL.
+    if (process.env.NODE_ENV === "production" && !warnedAboutOpenDeployment) {
+      warnedAboutOpenDeployment = true;
+      console.warn(
+        "KILO_PASSCODE is not set — this deployment is open to anyone who knows the URL.",
+      );
+    }
+    return NextResponse.next();
+  }
 
   const { pathname } = request.nextUrl;
   if (OPEN_PATHS.some((path) => pathname.startsWith(path))) return NextResponse.next();
 
   const presented = request.cookies.get(GATE_COOKIE)?.value;
-  if (presented && presented === (await passcodeToken(passcode))) {
+  if (presented && tokenMatches(presented, await passcodeToken(passcode))) {
     return NextResponse.next();
   }
 

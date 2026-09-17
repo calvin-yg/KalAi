@@ -18,6 +18,9 @@ import {
 } from "@/lib/nutrition";
 import type { DayTargets, Entry, Profile, UserSummary } from "@/lib/types";
 
+/** How much history the dashboard pulls around the selected day. */
+const WINDOW_DAYS = 30;
+
 const MEAL_ICONS: Record<Entry["meal"], string> = {
   breakfast: "🍳",
   lunch: "🥗",
@@ -34,6 +37,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [loggedDates, setLoggedDates] = useState<string[]>([]);
+  /** The date range currently held in `entries`, so we only refetch on leaving it. */
+  const [loadedRange, setLoadedRange] = useState<{ from: string; to: string } | null>(null);
   const [userId, setUserId] = useState("one");
   const [capturing, setCapturing] = useState(false);
   const [viewing, setViewing] = useState<Entry | null>(null);
@@ -42,9 +48,11 @@ export default function Home() {
     setLoadError(null);
     setUserId(currentUser());
     try {
+      // Enough history for the week strip and a little browsing, not the lot.
+      const range = { from: shiftDateKey(date, -WINDOW_DAYS), to: date };
       const [profileResult, entriesResult, usersResult] = await Promise.all([
         api.profile(),
-        api.entries(),
+        api.entries(range),
         api.users(),
       ]);
       setUsers(usersResult.users);
@@ -55,6 +63,8 @@ export default function Home() {
       setProfile(profileResult.profile);
       setTargets(profileResult.targets);
       setEntries(entriesResult.entries);
+      setLoggedDates(entriesResult.loggedDates);
+      setLoadedRange(range);
       setLoading(false);
     } catch (caught) {
       // Without this the screen would sit on the spinner indefinitely.
@@ -63,11 +73,37 @@ export default function Home() {
       );
       setLoading(false);
     }
-  }, [router]);
+  }, [router, date]);
+
+  /**
+   * Paging through days stays local until it leaves the loaded window — a tap
+   * on the arrow shouldn't cost a round trip when the data is already here.
+   */
+  useEffect(() => {
+    if (!loadedRange || (date >= loadedRange.from && date <= loadedRange.to)) return;
+    const range = { from: shiftDateKey(date, -WINDOW_DAYS), to: date };
+    let cancelled = false;
+    void api
+      .entries(range)
+      .then((result) => {
+        if (cancelled) return;
+        setEntries(result.entries);
+        setLoggedDates(result.loggedDates);
+        setLoadedRange(range);
+      })
+      .catch(() => {
+        // Keep showing what we have; the day just won't fill in.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date, loadedRange]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+    // Only on mount and on profile switch; day paging is handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   function switchTo(id: string) {
     setCurrentUser(id);
@@ -81,7 +117,7 @@ export default function Home() {
     [entries, date],
   );
   const eaten = useMemo(() => totalsForEntries(dayEntries), [dayEntries]);
-  const streak = useMemo(() => loggingStreak(entries), [entries]);
+  const streak = useMemo(() => loggingStreak(loggedDates), [loggedDates]);
 
   const week = useMemo(() => {
     const days: { key: string; calories: number }[] = [];
@@ -286,6 +322,9 @@ export default function Home() {
           onClose={() => setCapturing(false)}
           onSaved={(entry) => {
             setEntries((current) => [entry, ...current]);
+            setLoggedDates((current) =>
+              current.includes(entry.date) ? current : [...current, entry.date],
+            );
             setCapturing(false);
           }}
         />

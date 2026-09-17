@@ -76,8 +76,16 @@ export const api = {
       body: JSON.stringify({ weightKg }),
     }),
 
-  entries: (date?: string) =>
-    request<{ entries: Entry[] }>(withUser(`/api/entries${date ? `?date=${date}` : ""}`)),
+  entries: (window?: { from?: string; to?: string; date?: string }) => {
+    const params = new URLSearchParams();
+    if (window?.date) params.set("date", window.date);
+    if (window?.from) params.set("from", window.from);
+    if (window?.to) params.set("to", window.to);
+    const query = params.toString();
+    return request<{ entries: Entry[]; loggedDates: string[] }>(
+      withUser(`/api/entries${query ? `?${query}` : ""}`),
+    );
+  },
 
   createEntry: (entry: Partial<Entry>) =>
     request<{ entry: Entry }>(withUser("/api/entries"), {

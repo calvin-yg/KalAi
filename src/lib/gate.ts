@@ -20,6 +20,38 @@ export async function passcodeToken(passcode: string): Promise<string> {
     .join("");
 }
 
+/**
+ * Compare without leaking length or content through timing.
+ *
+ * Both sides are hashed first, so the comparison always runs over two equal
+ * fixed-length strings and an attacker learns nothing from how long it took.
+ */
+export async function passcodeMatches(
+  presented: string,
+  expected: string,
+): Promise<boolean> {
+  const [a, b] = await Promise.all([
+    passcodeToken(presented),
+    passcodeToken(expected),
+  ]);
+
+  let difference = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
+/** Compare an already-hashed cookie value against the expected token. */
+export function tokenMatches(presented: string, expected: string): boolean {
+  if (presented.length !== expected.length) return false;
+  let difference = 0;
+  for (let i = 0; i < presented.length; i += 1) {
+    difference |= presented.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
 export function configuredPasscode(): string | null {
   const value = process.env.KILO_PASSCODE?.trim();
   return value ? value : null;

@@ -10,11 +10,18 @@ import {
 } from "@/lib/store";
 import { roundMacros, sumMacros, toDateKey } from "@/lib/nutrition";
 import { userIdFrom } from "@/lib/session";
+import { readJson } from "@/lib/http";
+import { errorResponse } from "@/lib/responses";
 import type { Entry, FoodItem, MealType } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const MEALS: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
+
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
+
+/** Cap what lands on the volume — the client sends a downscaled JPEG. */
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 const num = (value: unknown, fallback = 0): number => {
   const n = typeof value === "number" ? value : Number(value);
@@ -40,18 +47,47 @@ function toFoodItem(raw: unknown): FoodItem {
   };
 }
 
-/** Strip the data-URL prefix from a JPEG the client captured. */
+/**
+ * Strip the data-URL prefix from a JPEG the client captured, rejecting one
+ * too large to keep. Without this an oversized photo would be written straight
+ * to the volume, and disk is the one resource this app can't recover from.
+ */
 function jpegBase64(dataUrl: string): string | null {
   const match = /^data:image\/jpeg;base64,(.+)$/s.exec(dataUrl);
-  return match ? match[1] : null;
+  if (!match) return null;
+  if ((match[1].length * 3) / 4 > MAX_PHOTO_BYTES) return null;
+  return match[1];
 }
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Entries for a date window, plus the bare list of dates that have any entry.
+ *
+ * The window matters: a year of two people logging is thousands of entries, and
+ * returning all of them on every dashboard load would mean megabytes over
+ * mobile data to render seven days. The date list stays cheap enough to send
+ * whole (one short string per logged day) and is all the streak needs.
+ */
 export async function GET(request: Request) {
   const userId = await userIdFrom(request);
-  const date = new URL(request.url).searchParams.get("date");
+  const params = new URL(request.url).searchParams;
   const user = await readUser(userId);
-  const entries = date ? user.entries.filter((e) => e.date === date) : user.entries;
-  return NextResponse.json({ entries });
+
+  const date = params.get("date");
+  const from = params.get("from");
+  const to = params.get("to");
+
+  let entries = user.entries;
+  if (date && DATE_PATTERN.test(date)) {
+    entries = entries.filter((e) => e.date === date);
+  } else {
+    if (from && DATE_PATTERN.test(from)) entries = entries.filter((e) => e.date >= from);
+    if (to && DATE_PATTERN.test(to)) entries = entries.filter((e) => e.date <= to);
+  }
+
+  const loggedDates = [...new Set(user.entries.map((e) => e.date))].sort();
+  return NextResponse.json({ entries, loggedDates });
 }
 
 export async function POST(request: Request) {
@@ -59,9 +95,9 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    return errorResponse(error, "Could not read that request.");
   }
 
   const items = Array.isArray(body.items) ? body.items.map(toFoodItem) : [];
@@ -106,9 +142,9 @@ export async function PATCH(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJson(request, MAX_BODY_BYTES);
+  } catch (error) {
+    return errorResponse(error, "Could not read that request.");
   }
 
   const id = str(body.id);
