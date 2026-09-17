@@ -99,8 +99,18 @@ export function CaptureSheet({ date, onClose, onSaved }: CaptureSheetProps) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
   // A sheet unmounted mid-request shouldn't try to set state afterwards.
+  //
+  // The flag must be re-armed on every mount, not just initialised once: React
+  // runs effects mount-cleanup-mount in development, so a cleanup-only version
+  // latches to false on the first pass and silently discards every response
+  // that follows — a permanent spinner, with the answer already in hand.
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   async function runAnalysis(input: { image?: string; description?: string }) {
     setStage("analysing");

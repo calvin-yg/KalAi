@@ -64,6 +64,11 @@ export function BarcodeScanner({ onDetected, onCancel }: BarcodeScannerProps) {
     let raf = 0;
     let zxingControls: { stop: () => void } | null = null;
 
+    // Re-arm on every mount. React runs effects mount-cleanup-mount in
+    // development, and a flag only ever set by the cleanup stays latched —
+    // the camera would open on the second pass and immediately shut itself off.
+    stoppedRef.current = false;
+
     async function start() {
       if (!navigator.mediaDevices?.getUserMedia) {
         setError(
