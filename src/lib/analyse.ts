@@ -9,7 +9,13 @@ import { z } from "zod";
  * hand the result straight to the UI without any free-text parsing.
  */
 
-export const MODEL = "claude-opus-5";
+/**
+ * Opus 5 by default. Set KILO_MODEL to try a cheaper one — Sonnet 5 is roughly
+ * 60% less per call, Haiku 4.5 about 80% less. Whether either holds up on food
+ * photos is a question for the accuracy harness, not for guesswork: run the
+ * same meals through both and compare bias and typical error before switching.
+ */
+export const MODEL = process.env.KILO_MODEL?.trim() || "claude-opus-5";
 
 const FoodItemSchema = z.object({
   name: z

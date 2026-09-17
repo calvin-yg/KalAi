@@ -137,7 +137,10 @@ async function main() {
   if (withPhotos.length === 0) fail("No meals in eval/truth.csv name a photo.");
 
   const calls = withPhotos.length * RUNS;
-  console.log(`\nMeals: ${withPhotos.length}   runs each: ${RUNS}   API calls: ${calls}`);
+  const model = process.env.KILO_MODEL?.trim() || "claude-opus-5";
+  console.log(
+    `\nModel: ${model}   meals: ${withPhotos.length}   runs each: ${RUNS}   API calls: ${calls}`,
+  );
 
   if (DRY_RUN) {
     console.log("Dry run — no API calls, no cost.\n");
@@ -218,6 +221,7 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    model: process.env.KILO_MODEL?.trim() || "claude-opus-5",
     dryRun: DRY_RUN,
     runsPerMeal: RUNS,
     mealCount: scores.length,
