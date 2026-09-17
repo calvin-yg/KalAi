@@ -141,6 +141,28 @@ export function formatDateKey(key: string): string {
   });
 }
 
+/**
+ * The Monday of the week containing this date.
+ *
+ * Weeks run Monday to Sunday here, as they do on an Australian calendar — a
+ * rolling "last seven days" strip makes it hard to see a week's shape, because
+ * the columns mean something different every day.
+ */
+export function startOfWeek(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  // getDay(): Sunday is 0, so Sunday must go back six days, not none.
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return toDateKey(date);
+}
+
+/** The seven days of the week containing this date, Monday first. */
+export function weekDaysFor(key: string): string[] {
+  const monday = startOfWeek(key);
+  return Array.from({ length: 7 }, (_, index) => shiftDateKey(monday, index));
+}
+
 /** Single weekday abbreviation for the week strip, e.g. "Wed". */
 export function weekdayLabel(key: string): string {
   const [y, m, d] = key.split("-").map(Number);

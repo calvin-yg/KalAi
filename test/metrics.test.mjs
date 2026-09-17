@@ -143,3 +143,21 @@ test("range coverage tells an honest range from a reassuring one", async () => {
   // A range with no width is not a range and shouldn't be counted.
   assert.equal(rangeCoverage([scored("e", 500, 500, 500)]), null);
 });
+
+test("weeks run Monday to Sunday, including across the Sunday boundary", async () => {
+  const { startOfWeek, weekDaysFor } = await import("../src/lib/nutrition.ts");
+
+  // 2026-09-17 is a Thursday; its week starts Monday the 14th.
+  assert.equal(startOfWeek("2026-09-17"), "2026-09-14");
+  // A Monday is its own week start.
+  assert.equal(startOfWeek("2026-09-14"), "2026-09-14");
+  // Sunday belongs to the week that began six days earlier, not the next one.
+  assert.equal(startOfWeek("2026-09-20"), "2026-09-14");
+  // And the Monday after rolls over.
+  assert.equal(startOfWeek("2026-09-21"), "2026-09-21");
+
+  const days = weekDaysFor("2026-09-17");
+  assert.equal(days.length, 7);
+  assert.equal(days[0], "2026-09-14");
+  assert.equal(days[6], "2026-09-20");
+});

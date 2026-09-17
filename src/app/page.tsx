@@ -14,12 +14,27 @@ import {
   toDateKey,
   toKilojoules,
   totalsForEntries,
+  weekDaysFor,
   weekdayLabel,
 } from "@/lib/nutrition";
 import type { DayTargets, Entry, Profile, UserSummary } from "@/lib/types";
 
 /** How much history the dashboard pulls around the selected day. */
 const WINDOW_DAYS = 30;
+
+/**
+ * What to fetch for a given day: enough history for browsing, and out to the
+ * end of that day's week so the strip isn't missing days that do have meals.
+ */
+function rangeFor(date: string): { from: string; to: string } {
+  const days = weekDaysFor(date);
+  const today = toDateKey();
+  const weekEnd = days[6];
+  return {
+    from: shiftDateKey(days[0], -WINDOW_DAYS),
+    to: weekEnd > today ? today : weekEnd,
+  };
+}
 
 const MEAL_ICONS: Record<Entry["meal"], string> = {
   breakfast: "🍳",
@@ -48,8 +63,7 @@ export default function Home() {
     setLoadError(null);
     setUserId(currentUser());
     try {
-      // Enough history for the week strip and a little browsing, not the lot.
-      const range = { from: shiftDateKey(date, -WINDOW_DAYS), to: date };
+      const range = rangeFor(date);
       const [profileResult, entriesResult, usersResult] = await Promise.all([
         api.profile(),
         api.entries(range),
@@ -81,7 +95,7 @@ export default function Home() {
    */
   useEffect(() => {
     if (!loadedRange || (date >= loadedRange.from && date <= loadedRange.to)) return;
-    const range = { from: shiftDateKey(date, -WINDOW_DAYS), to: date };
+    const range = rangeFor(date);
     let cancelled = false;
     void api
       .entries(range)
@@ -119,17 +133,16 @@ export default function Home() {
   const eaten = useMemo(() => totalsForEntries(dayEntries), [dayEntries]);
   const streak = useMemo(() => loggingStreak(loggedDates), [loggedDates]);
 
-  const week = useMemo(() => {
-    const days: { key: string; calories: number }[] = [];
-    for (let offset = 6; offset >= 0; offset -= 1) {
-      const key = shiftDateKey(date, -offset);
-      days.push({
+  const week = useMemo(
+    () =>
+      weekDaysFor(date).map((key) => ({
         key,
         calories: totalsForEntries(entries.filter((e) => e.date === key)).calories,
-      });
-    }
-    return days;
-  }, [entries, date]);
+        // Days that haven't happened yet are drawn faintly rather than as empty ones.
+        future: key > toDateKey(),
+      })),
+    [entries, date],
+  );
 
   if (loadError) {
     return (
@@ -261,7 +274,11 @@ export default function Home() {
 
         <div className="weekstrip">
           {week.map((day) => (
-            <div className="weekday" key={day.key}>
+            <div
+              className="weekday"
+              key={day.key}
+              style={day.future ? { opacity: 0.35 } : undefined}
+            >
               <div className="dotbar">
                 <i
                   style={{
