@@ -96,6 +96,15 @@ button {
   text-transform: uppercase;
 }
 
+.topbar-center {
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.topbar-center .brand {
+  font-size: 32px;
+}
+
 .streak {
   display: inline-flex;
   align-items: center;

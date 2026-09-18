@@ -103,10 +103,8 @@ export default function Onboarding() {
 
   return (
     <main className="app">
-      <header className="topbar">
-        <div className="brand">
-          KalAi <span>{existing ? "your details" : "set up"}</span>
-        </div>
+      <header className="topbar topbar-center">
+        <div className="brand">KalAi</div>
       </header>
 
       {error && <div className="notice error">{error}</div>}
@@ -126,14 +124,6 @@ export default function Onboarding() {
         })}
       </div>
 
-      {!existing && (
-        <div className="notice info">
-          These details set the daily calorie and macro targets for this profile. Two
-          people can share one deployment — each keeps a separate food log, and you swap
-          between them with the tabs above.
-        </div>
-      )}
-
       <section className="card">
         <div className="field">
           <label htmlFor="name">First name</label>
@@ -147,7 +137,7 @@ export default function Onboarding() {
         </div>
 
         <div className="field">
-          <label>Sex assigned at birth</label>
+          <label>Sex</label>
           <div className="chips">
             {(["female", "male"] as Sex[]).map((option) => (
               <button
@@ -159,10 +149,6 @@ export default function Onboarding() {
                 {option === "female" ? "Female" : "Male"}
               </button>
             ))}
-          </div>
-          <div className="hint">
-            Used only for the metabolic-rate formula, which is calibrated separately for
-            each.
           </div>
         </div>
 
@@ -247,10 +233,6 @@ export default function Onboarding() {
               value={form.rateKgPerWeek}
               onChange={(event) => set("rateKgPerWeek", Number(event.target.value))}
             />
-            <div className="hint">
-              0.5 kg a week is the usual sustainable pace. Faster than 1 kg a week is hard
-              to hold and costs you muscle.
-            </div>
           </div>
         )}
 
@@ -260,19 +242,12 @@ export default function Onboarding() {
             id="custom"
             type="number"
             inputMode="numeric"
-            placeholder={`Calculated: ${targets.calories} kcal`}
             value={form.customCalories ?? ""}
             onChange={(event) =>
               set("customCalories", event.target.value === "" ? null : Number(event.target.value))
             }
           />
-          <div className="hint">
-            Leave blank unless you have a reason. This is also where a safety margin
-            belongs: photo estimates carry real uncertainty, so if you&apos;d rather err on
-            the cautious side, set a target a little under the calculated one. Better to
-            adjust the goalposts than to have the food log quietly tell you something
-            other than what you ate.
-          </div>
+          <div className="hint">Leave blank unless you have a reason.</div>
         </div>
       </section>
 
