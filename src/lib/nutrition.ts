@@ -169,6 +169,22 @@ export function weekdayLabel(key: string): string {
   return new Date(y, m - 1, d).toLocaleDateString("en-AU", { weekday: "short" });
 }
 
+/**
+ * Parse a YYYY-MM-DD key into a local Date.
+ *
+ * Month is zero-indexed in JavaScript, so passing the calendar month straight
+ * through silently shifts every date forward by one month.
+ */
+export function dateFromKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Short day and month for a chart axis, e.g. "18 Sep". */
+export function formatDayMonth(key: string): string {
+  return dateFromKey(key).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+}
+
 /** Kilojoules, for anyone reading Australian packaging. */
 export function toKilojoules(calories: number): number {
   return Math.round(calories * 4.184);

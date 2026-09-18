@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { CaptureSheet } from "@/components/CaptureSheet";
 import { EntrySheet } from "@/components/EntrySheet";
 import { Ring } from "@/components/Ring";
+import { TrendsView } from "@/components/TrendsView";
+import { WeekView } from "@/components/WeekView";
 import { api, currentUser, photoUrl, setCurrentUser } from "@/lib/client";
 import {
   formatDateKey,
@@ -17,18 +19,26 @@ import {
   weekDaysFor,
   weekdayLabel,
 } from "@/lib/nutrition";
-import type { DayTargets, Entry, Profile, UserSummary } from "@/lib/types";
+import type { DayTargets, Entry, Profile, UserSummary, WeighIn } from "@/lib/types";
+
+type View = "day" | "week" | "trends";
 
 /** How much history the dashboard pulls around the selected day. */
 const WINDOW_DAYS = 30;
+
+/** Trends looks back eight weeks, so it needs a wider net than a single week. */
+const TRENDS_DAYS = 70;
 
 /**
  * What to fetch for a given day: enough history for browsing, and out to the
  * end of that day's week so the strip isn't missing days that do have meals.
  */
-function rangeFor(date: string): { from: string; to: string } {
-  const days = weekDaysFor(date);
+function rangeFor(date: string, view: View): { from: string; to: string } {
   const today = toDateKey();
+  if (view === "trends") {
+    return { from: shiftDateKey(today, -TRENDS_DAYS), to: today };
+  }
+  const days = weekDaysFor(date);
   const weekEnd = days[6];
   return {
     from: shiftDateKey(days[0], -WINDOW_DAYS),
@@ -53,6 +63,8 @@ export default function Home() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [loggedDates, setLoggedDates] = useState<string[]>([]);
+  const [weighIns, setWeighIns] = useState<WeighIn[]>([]);
+  const [view, setView] = useState<View>("day");
   /** The date range currently held in `entries`, so we only refetch on leaving it. */
   const [loadedRange, setLoadedRange] = useState<{ from: string; to: string } | null>(null);
   const [userId, setUserId] = useState("one");
@@ -63,7 +75,7 @@ export default function Home() {
     setLoadError(null);
     setUserId(currentUser());
     try {
-      const range = rangeFor(date);
+      const range = rangeFor(date, view);
       const [profileResult, entriesResult, usersResult] = await Promise.all([
         api.profile(),
         api.entries(range),
@@ -78,6 +90,7 @@ export default function Home() {
       setTargets(profileResult.targets);
       setEntries(entriesResult.entries);
       setLoggedDates(entriesResult.loggedDates);
+      setWeighIns(profileResult.weighIns);
       setLoadedRange(range);
       setLoading(false);
     } catch (caught) {
@@ -87,15 +100,23 @@ export default function Home() {
       );
       setLoading(false);
     }
-  }, [router, date]);
+  }, [router, date, view]);
 
   /**
    * Paging through days stays local until it leaves the loaded window — a tap
    * on the arrow shouldn't cost a round trip when the data is already here.
    */
   useEffect(() => {
-    if (!loadedRange || (date >= loadedRange.from && date <= loadedRange.to)) return;
-    const range = rangeFor(date);
+    const range = rangeFor(date, view);
+    if (
+      loadedRange &&
+      range.from >= loadedRange.from &&
+      range.to <= loadedRange.to &&
+      date >= loadedRange.from &&
+      date <= loadedRange.to
+    ) {
+      return;
+    }
     let cancelled = false;
     void api
       .entries(range)
@@ -111,7 +132,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [date, loadedRange]);
+  }, [date, view, loadedRange]);
 
   useEffect(() => {
     void load();
@@ -207,124 +228,172 @@ export default function Home() {
         </div>
       )}
 
-      <div className="daynav">
-        <button aria-label="Previous day" onClick={() => setDate(shiftDateKey(date, -1))}>
-          ‹
-        </button>
-        <h2>{formatDateKey(date)}</h2>
-        <button
-          aria-label="Next day"
-          disabled={isToday}
-          onClick={() => setDate(shiftDateKey(date, 1))}
-        >
-          ›
-        </button>
-      </div>
-
-      <section className="card">
-        <div className="ring-hero">
-          <div className="figure">
-            <Ring progress={eaten.calories / targets.calories}>
-              <div className="ring-value">{Math.abs(Math.round(remaining))}</div>
-              <div className="ring-label">{remaining >= 0 ? "left" : "over"}</div>
-            </Ring>
-          </div>
-          <div>
-            <div className="ring-value">{eaten.calories}</div>
-            <div className="ring-label">
-              of {targets.calories} kcal · {toKilojoules(eaten.calories)} kJ
-            </div>
-            <div className="ring-sub">
-              {profile.goal === "maintain"
-                ? `Maintenance for you is about ${targets.maintenance} kcal a day.`
-                : profile.goal === "lose"
-                  ? `A ${targets.maintenance - targets.calories} kcal daily deficit — about ${profile.rateKgPerWeek} kg a week.`
-                  : `A ${targets.calories - targets.maintenance} kcal daily surplus — about ${profile.rateKgPerWeek} kg a week.`}
-            </div>
-          </div>
-        </div>
-
-        <div className="macro-grid">
-          {(
-            [
-              ["Protein", eaten.protein, targets.protein, "var(--protein)"],
-              ["Carbs", eaten.carbs, targets.carbs, "var(--carbs)"],
-              ["Fat", eaten.fat, targets.fat, "var(--fat)"],
-            ] as const
-          ).map(([name, value, target, colour]) => (
-            <div className="macro" key={name}>
-              <div className="name" style={{ color: colour }}>
-                {name}
-              </div>
-              <div className="value">
-                {value}
-                <span style={{ fontSize: 12, color: "var(--muted)" }}> /{target} g</span>
-              </div>
-              <div className="bar">
-                <i
-                  style={{
-                    width: `${Math.min(100, (value / Math.max(1, target)) * 100)}%`,
-                    background: colour,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="weekstrip">
-          {week.map((day) => (
-            <div
-              className="weekday"
-              key={day.key}
-              style={day.future ? { opacity: 0.35 } : undefined}
-            >
-              <div className="dotbar">
-                <i
-                  style={{
-                    height: `${Math.min(100, (day.calories / Math.max(1, targets.calories)) * 100)}%`,
-                    opacity: day.key === date ? 1 : 0.4,
-                  }}
-                />
-              </div>
-              {weekdayLabel(day.key)}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="section-title">
-        <span>Logged</span>
-        <span>{dayEntries.length} {dayEntries.length === 1 ? "meal" : "meals"}</span>
-      </div>
-
-      {dayEntries.length === 0 ? (
-        <div className="empty">
-          Nothing logged {isToday ? "yet today" : "on this day"}.
-          <br />
-          Tap the camera below and photograph your plate.
-        </div>
-      ) : (
-        dayEntries.map((entry) => (
-          <button className="entry" key={entry.id} onClick={() => setViewing(entry)}>
-            {entry.photo ? (
-              <img className="thumb" src={photoUrl(entry.photo)} alt="" />
-            ) : (
-              <div className="thumb placeholder">{MEAL_ICONS[entry.meal]}</div>
-            )}
-            <div className="body">
-              <div className="name">{entry.title}</div>
-              <div className="meta">
-                {MEAL_ICONS[entry.meal]} P{entry.totals.protein} · C{entry.totals.carbs} · F
-                {entry.totals.fat} ·{" "}
-                {entry.source === "barcode"
-                  ? "from the label"
-                  : `score ${entry.healthScore}/10`}
-              </div>
-            </div>
-            <div className="kcal">{entry.totals.calories}</div>
+      <div className="tabs" role="tablist" aria-label="View">
+        {(["day", "week", "trends"] as View[]).map((option) => (
+          <button
+            key={option}
+            role="tab"
+            aria-selected={view === option}
+            onClick={() => setView(option)}
+          >
+            {option === "day" ? "Day" : option === "week" ? "Week" : "Trends"}
           </button>
-        ))
+        ))}
+      </div>
+
+      {view !== "trends" && (
+        <div className="daynav">
+          <button
+            aria-label={view === "week" ? "Previous week" : "Previous day"}
+            onClick={() => setDate(shiftDateKey(date, view === "week" ? -7 : -1))}
+          >
+            ‹
+          </button>
+          <h2>
+            {view === "week"
+              ? `Week of ${formatDateKey(weekDaysFor(date)[0])}`
+              : formatDateKey(date)}
+          </h2>
+          <button
+            aria-label={view === "week" ? "Next week" : "Next day"}
+            disabled={view === "week" ? weekDaysFor(date)[6] >= toDateKey() : isToday}
+            onClick={() => setDate(shiftDateKey(date, view === "week" ? 7 : 1))}
+          >
+            ›
+          </button>
+        </div>
+      )}
+
+      {view === "day" && (
+        <>
+        <section className="card">
+          <div className="ring-hero">
+            <div className="figure">
+              <Ring progress={eaten.calories / targets.calories}>
+                <div className="ring-value">{Math.abs(Math.round(remaining))}</div>
+                <div className="ring-label">{remaining >= 0 ? "left" : "over"}</div>
+              </Ring>
+            </div>
+            <div>
+              <div className="ring-value">{eaten.calories}</div>
+              <div className="ring-label">
+                of {targets.calories} kcal · {toKilojoules(eaten.calories)} kJ
+              </div>
+              <div className="ring-sub">
+                {profile.goal === "maintain"
+                  ? `Maintenance for you is about ${targets.maintenance} kcal a day.`
+                  : profile.goal === "lose"
+                    ? `A ${targets.maintenance - targets.calories} kcal daily deficit — about ${profile.rateKgPerWeek} kg a week.`
+                    : `A ${targets.calories - targets.maintenance} kcal daily surplus — about ${profile.rateKgPerWeek} kg a week.`}
+              </div>
+            </div>
+          </div>
+
+          <div className="macro-grid">
+            {(
+              [
+                ["Protein", eaten.protein, targets.protein, "var(--protein)"],
+                ["Carbs", eaten.carbs, targets.carbs, "var(--carbs)"],
+                ["Fat", eaten.fat, targets.fat, "var(--fat)"],
+              ] as const
+            ).map(([name, value, target, colour]) => (
+              <div className="macro" key={name}>
+                <div className="name" style={{ color: colour }}>
+                  {name}
+                </div>
+                <div className="value">
+                  {value}
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}> /{target} g</span>
+                </div>
+                <div className="bar">
+                  <i
+                    style={{
+                      width: `${Math.min(100, (value / Math.max(1, target)) * 100)}%`,
+                      background: colour,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="weekstrip">
+            {week.map((day) => (
+              <div
+                className="weekday"
+                key={day.key}
+                style={day.future ? { opacity: 0.35 } : undefined}
+              >
+                <div className="dotbar">
+                  <i
+                    style={{
+                      height: `${Math.min(100, (day.calories / Math.max(1, targets.calories)) * 100)}%`,
+                      opacity: day.key === date ? 1 : 0.4,
+                    }}
+                  />
+                </div>
+                {weekdayLabel(day.key)}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="section-title">
+          <span>Logged</span>
+          <span>{dayEntries.length} {dayEntries.length === 1 ? "meal" : "meals"}</span>
+        </div>
+
+        {dayEntries.length === 0 ? (
+          <div className="empty">
+            Nothing logged {isToday ? "yet today" : "on this day"}.
+            <br />
+            Tap the camera below and photograph your plate.
+          </div>
+        ) : (
+          dayEntries.map((entry) => (
+            <button className="entry" key={entry.id} onClick={() => setViewing(entry)}>
+              {entry.photo ? (
+                <img className="thumb" src={photoUrl(entry.photo)} alt="" />
+              ) : (
+                <div className="thumb placeholder">{MEAL_ICONS[entry.meal]}</div>
+              )}
+              <div className="body">
+                <div className="name">{entry.title}</div>
+                <div className="meta">
+                  {MEAL_ICONS[entry.meal]} P{entry.totals.protein} · C{entry.totals.carbs} · F
+                  {entry.totals.fat} ·{" "}
+                  {entry.source === "barcode"
+                    ? "from the label"
+                    : `score ${entry.healthScore}/10`}
+                </div>
+              </div>
+              <div className="kcal">{entry.totals.calories}</div>
+            </button>
+          ))
+        )}
+        </>
+      )}
+
+      {view === "week" && (
+        <WeekView
+          date={date}
+          entries={entries}
+          targets={targets}
+          onPickDay={(picked) => {
+            setDate(picked);
+            setView("day");
+          }}
+        />
+      )}
+
+      {view === "trends" && (
+        <TrendsView
+          entries={entries}
+          weighIns={weighIns}
+          targets={targets}
+          loggedDates={loggedDates}
+          onWeighIn={(updated) => setWeighIns(updated)}
+        />
       )}
 
       <nav className="dock">

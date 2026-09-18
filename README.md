@@ -20,8 +20,10 @@ Claude Opus 5 vision with structured outputs.
 - **Daily targets.** Onboarding collects age, sex, height, weight, activity and goal, then
   derives BMR (Mifflin-St Jeor), maintenance (TDEE) and a calorie target from your chosen
   pace. Protein scales with body weight, fat sits at 25% of intake, carbs take the rest.
-- **The day's picture.** Calorie ring, macro bars against target, a seven-day strip, meal
-  list, and a logging streak. Calories are shown in kilojoules too.
+- **Three views.** *Day* is the ring, macro bars and meal list. *Week* is Monday to
+  Sunday against the target, with averages and days on track. *Trends* is eight weeks
+  of weekly averages, a weight line, and the comparison that matters most: what the
+  food log predicts against what the scales actually say.
 - **Two people, one deployment.** Separate profiles, targets and food logs, with a tab to
   swap between them. An optional shared passcode keeps strangers out.
 

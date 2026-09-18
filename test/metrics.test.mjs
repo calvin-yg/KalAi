@@ -161,3 +161,13 @@ test("weeks run Monday to Sunday, including across the Sunday boundary", async (
   assert.equal(days[0], "2026-09-14");
   assert.equal(days[6], "2026-09-20");
 });
+
+test("dates parse to the right month, not one ahead", async () => {
+  const { formatDayMonth, dateFromKey } = await import("../src/lib/nutrition.ts");
+
+  // JavaScript months are zero-indexed; passing 9 through gives October.
+  assert.equal(dateFromKey("2026-09-18").getMonth(), 8);
+  assert.match(formatDayMonth("2026-09-18"), /18 Sep/);
+  assert.match(formatDayMonth("2026-01-01"), /1 Jan/);
+  assert.match(formatDayMonth("2026-12-31"), /31 Dec/);
+});
