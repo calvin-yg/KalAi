@@ -31,8 +31,8 @@ const RESULTS_DIR = path.join(HERE, "results");
 const MAX_EDGE = 1024;
 const JPEG_QUALITY = 82;
 
-/** Rough per-call cost at Opus 5 pricing; enough to decide with, not an invoice. */
-const COST_PER_CALL_USD = 0.03;
+/** Rough per-call cost at Sonnet 5 pricing; enough to decide with, not an invoice. */
+const COST_PER_CALL_USD = 0.015;
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -137,7 +137,7 @@ async function main() {
   if (withPhotos.length === 0) fail("No meals in eval/truth.csv name a photo.");
 
   const calls = withPhotos.length * RUNS;
-  const model = process.env.KILO_MODEL?.trim() || "claude-opus-5";
+  const model = process.env.KILO_MODEL?.trim() || "claude-sonnet-5";
   console.log(
     `\nModel: ${model}   meals: ${withPhotos.length}   runs each: ${RUNS}   API calls: ${calls}`,
   );
@@ -221,7 +221,7 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
-    model: process.env.KILO_MODEL?.trim() || "claude-opus-5",
+    model: process.env.KILO_MODEL?.trim() || "claude-sonnet-5",
     dryRun: DRY_RUN,
     runsPerMeal: RUNS,
     mealCount: scores.length,

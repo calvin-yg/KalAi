@@ -78,7 +78,8 @@ security boundary. The cookie stores a hash, not the passcode itself.
 
 ## How the estimate is produced
 
-`src/lib/analyse.ts` sends the image (or description) to `claude-opus-5` with
+`src/lib/analyse.ts` sends the image (or description) to `claude-sonnet-5` (set
+`KILO_MODEL` to change it) with
 `messages.parse()` and a Zod schema via `zodOutputFormat`, so the response is already
 typed JSON — no free-text parsing anywhere in the app. Adaptive thinking is on at medium
 effort: portion estimation benefits from the model reasoning about plate geometry before
