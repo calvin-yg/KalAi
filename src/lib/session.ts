@@ -19,6 +19,6 @@ export async function userIdFrom(request: Request): Promise<UserId> {
   const fromQuery = new URL(request.url).searchParams.get("user");
   if (isUserId(fromQuery)) return fromQuery;
 
-  const fromCookie = (await cookies()).get("kilo_user")?.value;
+  const fromCookie = (await cookies()).get("kalai_user")?.value;
   return isUserId(fromCookie) ? fromCookie : DEFAULT_USER;
 }

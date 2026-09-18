@@ -105,7 +105,7 @@ export default function Onboarding() {
     <main className="app">
       <header className="topbar">
         <div className="brand">
-          Kilo <span>{existing ? "your details" : "set up"}</span>
+          KalAi <span>{existing ? "your details" : "set up"}</span>
         </div>
       </header>
 

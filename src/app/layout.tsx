@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kilo — calorie tracking from a photo",
+  title: "KalAi — calorie tracking from a photo",
   description:
-    "Photograph your meal and Kilo estimates the calories, protein, carbs and fat.",
+    "Photograph your meal and KalAi estimates the calories, protein, carbs and fat.",
   // Installs to the home screen and runs without browser chrome.
   manifest: "/manifest.webmanifest",
-  applicationName: "Kilo",
+  applicationName: "KalAi",
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Kilo",
+    title: "KalAi",
     // Dark bar, so the status bar blends into the app rather than framing it.
     statusBarStyle: "black-translucent",
   },

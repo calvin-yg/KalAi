@@ -137,7 +137,7 @@ async function main() {
   if (withPhotos.length === 0) fail("No meals in eval/truth.csv name a photo.");
 
   const calls = withPhotos.length * RUNS;
-  const model = process.env.KILO_MODEL?.trim() || "claude-sonnet-5";
+  const model = process.env.KALAI_MODEL?.trim() || "claude-sonnet-5";
   console.log(
     `\nModel: ${model}   meals: ${withPhotos.length}   runs each: ${RUNS}   API calls: ${calls}`,
   );
@@ -221,7 +221,7 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
-    model: process.env.KILO_MODEL?.trim() || "claude-sonnet-5",
+    model: process.env.KALAI_MODEL?.trim() || "claude-sonnet-5",
     dryRun: DRY_RUN,
     runsPerMeal: RUNS,
     mealCount: scores.length,

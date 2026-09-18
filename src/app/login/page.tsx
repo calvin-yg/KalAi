@@ -30,7 +30,7 @@ export default function Login() {
   return (
     <main className="gate">
       <div className="brand" style={{ justifyContent: "center", marginBottom: 20 }}>
-        Kilo <span>photo tracking</span>
+        KalAi <span>photo tracking</span>
       </div>
       <form onSubmit={submit}>
         {error && <div className="notice error">{error}</div>}

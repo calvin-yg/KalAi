@@ -1,16 +1,16 @@
 # Fly.io deployment. The volume is what makes this work: the food log and the
 # photos are files on disk, so the app needs storage that survives a restart.
-app = "kilo"
+app = "kalai"
 primary_region = "syd"
 
 [build]
 
 [env]
-  KILO_DATA_DIR = "/data"
+  KALAI_DATA_DIR = "/data"
   TZ = "Australia/Melbourne"
 
 [[mounts]]
-  source = "kilo_data"
+  source = "kalai_data"
   destination = "/data"
 
 [http_service]

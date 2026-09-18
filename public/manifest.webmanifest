@@ -1,6 +1,6 @@
 {
-  "name": "Kilo — photo calorie tracking",
-  "short_name": "Kilo",
+  "name": "KalAi — photo calorie tracking",
+  "short_name": "KalAi",
   "description": "Photograph a meal and get the calories and macros.",
   "start_url": "/",
   "display": "standalone",

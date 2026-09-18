@@ -6,14 +6,14 @@
  * It exists so that a personal tracker on a public URL isn't readable and
  * writable by anyone who guesses the address.
  *
- * Set KILO_PASSCODE to turn it on. Left unset (e.g. on localhost), the app is open.
+ * Set KALAI_PASSCODE to turn it on. Left unset (e.g. on localhost), the app is open.
  */
 
-export const GATE_COOKIE = "kilo_gate";
+export const GATE_COOKIE = "kalai_gate";
 
 /** Web Crypto rather than node:crypto, so middleware can use this too. */
 export async function passcodeToken(passcode: string): Promise<string> {
-  const data = new TextEncoder().encode(`kilo:${passcode}`);
+  const data = new TextEncoder().encode(`kalai:${passcode}`);
   const digest = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -53,6 +53,6 @@ export function tokenMatches(presented: string, expected: string): boolean {
 }
 
 export function configuredPasscode(): string | null {
-  const value = process.env.KILO_PASSCODE?.trim();
+  const value = process.env.KALAI_PASSCODE?.trim();
   return value ? value : null;
 }

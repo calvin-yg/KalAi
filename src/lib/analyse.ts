@@ -13,11 +13,11 @@ import { z } from "zod";
  * Sonnet 5 by default: roughly 60% cheaper per call than Opus 5, which matters
  * when every meal costs money and a household logs six a day.
  *
- * Whether it estimates as well is unmeasured. Set KILO_MODEL=claude-opus-5 to
+ * Whether it estimates as well is unmeasured. Set KALAI_MODEL=claude-opus-5 to
  * go back, or claude-haiku-4-5 to go cheaper still, and use the accuracy
  * harness to compare them on the same meals rather than on impressions.
  */
-export const MODEL = process.env.KILO_MODEL?.trim() || "claude-sonnet-5";
+export const MODEL = process.env.KALAI_MODEL?.trim() || "claude-sonnet-5";
 
 const FoodItemSchema = z.object({
   name: z

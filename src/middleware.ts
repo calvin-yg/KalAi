@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
     if (process.env.NODE_ENV === "production" && !warnedAboutOpenDeployment) {
       warnedAboutOpenDeployment = true;
       console.warn(
-        "KILO_PASSCODE is not set — this deployment is open to anyone who knows the URL.",
+        "KALAI_PASSCODE is not set — this deployment is open to anyone who knows the URL.",
       );
     }
     return NextResponse.next();

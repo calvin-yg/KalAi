@@ -12,8 +12,8 @@ import type { Database, Entry, Profile, UserRecord, UserSummary, WeighIn } from 
  * logging, and every read parses the whole thing.
  */
 
-const DATA_DIR = process.env.KILO_DATA_DIR
-  ? path.resolve(process.env.KILO_DATA_DIR)
+const DATA_DIR = process.env.KALAI_DATA_DIR
+  ? path.resolve(process.env.KALAI_DATA_DIR)
   : path.join(process.cwd(), "data");
 
 const DB_PATH = path.join(DATA_DIR, "db.json");

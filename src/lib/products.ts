@@ -9,7 +9,7 @@ import type { Macros, Product } from "./types";
 const ENDPOINT = "https://world.openfoodfacts.org/api/v2/product";
 
 // Open Food Facts asks every client to identify itself.
-const USER_AGENT = "Kilo/0.1 (personal calorie tracker)";
+const USER_AGENT = "KalAi/0.1 (personal calorie tracker)";
 
 const FIELDS = [
   "code",

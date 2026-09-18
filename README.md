@@ -1,4 +1,4 @@
-# Kilo
+# KalAi
 
 Photograph a meal, get the calories and macros. A Cal AI-style calorie tracker built on
 Claude Opus 5 vision with structured outputs.
@@ -56,8 +56,8 @@ to get HTTPS:
 
 ```bash
 fly launch --no-deploy            # keeps the bundled fly.toml
-fly volumes create kilo_data -r syd -n 1 -s 1   # the log and photos live here
-fly secrets set ANTHROPIC_API_KEY=sk-ant-... KILO_PASSCODE=<something you both know>
+fly volumes create kalai_data -r syd -n 1 -s 1   # the log and photos live here
+fly secrets set ANTHROPIC_API_KEY=sk-ant-... KALAI_PASSCODE=<something you both know>
 fly deploy
 ```
 
@@ -73,7 +73,7 @@ their filesystems are ephemeral. That would mean moving storage to a database fi
 
 ### The passcode
 
-Set `KILO_PASSCODE` and every page and API call requires it once per device; leave it
+Set `KALAI_PASSCODE` and every page and API call requires it once per device; leave it
 unset (localhost) and the app is open. It is a front door for the deployment, not per-user
 login: you both use the same code, and the profile tabs are a convenience rather than a
 security boundary. The cookie stores a hash, not the passcode itself.
@@ -81,7 +81,7 @@ security boundary. The cookie stores a hash, not the passcode itself.
 ## How the estimate is produced
 
 `src/lib/analyse.ts` sends the image (or description) to `claude-sonnet-5` (set
-`KILO_MODEL` to change it) with
+`KALAI_MODEL` to change it) with
 `messages.parse()` and a Zod schema via `zodOutputFormat`, so the response is already
 typed JSON — no free-text parsing anywhere in the app. Adaptive thinking is on at medium
 effort: portion estimation benefits from the model reasoning about plate geometry before

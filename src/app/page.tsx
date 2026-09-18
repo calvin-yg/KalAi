@@ -202,7 +202,7 @@ export default function Home() {
     <main className="app">
       <header className="topbar">
         <div className="brand">
-          Kilo <span>photo tracking</span>
+          KalAi <span>photo tracking</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <span className="streak" title="Consecutive days logged">

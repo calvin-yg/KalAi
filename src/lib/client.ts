@@ -6,7 +6,7 @@ import type { DayTargets, Entry, Product, Profile, UserSummary, WeighIn } from "
  * people sharing a deployment never see each other's log.
  */
 
-const USER_KEY = "kilo_user";
+const USER_KEY = "kalai_user";
 
 export function currentUser(): string {
   if (typeof window === "undefined") return "one";
@@ -25,7 +25,7 @@ export function setCurrentUser(id: string): void {
     // Not fatal — the cookie below still carries the choice for this session.
   }
   // Mirrored into a cookie so server routes can read it without a query param.
-  document.cookie = `kilo_user=${id}; path=/; max-age=31536000; samesite=lax`;
+  document.cookie = `kalai_user=${id}; path=/; max-age=31536000; samesite=lax`;
 }
 
 /** Append the active profile to a URL. */
