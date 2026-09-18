@@ -29,9 +29,7 @@ export default function Login() {
 
   return (
     <main className="gate">
-      <div className="brand" style={{ justifyContent: "center", marginBottom: 20 }}>
-        KalAi <span>photo tracking</span>
-      </div>
+      <div className="brand">KalAi</div>
       <form onSubmit={submit}>
         {error && <div className="notice error">{error}</div>}
         <div className="field">

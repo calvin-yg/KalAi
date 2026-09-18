@@ -485,6 +485,7 @@ button {
 
 input[type="text"],
 input[type="number"],
+input[type="password"],
 select,
 textarea {
   width: 100%;
@@ -698,8 +699,19 @@ textarea {
 
 .gate {
   max-width: 380px;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 18vh 20px 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.gate .brand {
+  justify-content: center;
+  text-align: center;
+  font-size: 40px;
+  margin-bottom: 32px;
 }
 
 /* The honest width of a photo estimate, shown rather than hidden. */
