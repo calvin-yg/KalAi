@@ -724,6 +724,24 @@ textarea {
   margin-bottom: 32px;
 }
 
+@media (max-width: 480px) {
+  .gate {
+    justify-content: flex-start;
+    padding-top: 25vh;
+    padding-top: 25dvh;
+  }
+
+  .gate .brand {
+    margin-bottom: 0;
+  }
+
+  .gate form {
+    margin-top: auto;
+    margin-bottom: 25vh;
+    margin-bottom: 25dvh;
+  }
+}
+
 /* The honest width of a photo estimate, shown rather than hidden. */
 .range {
   display: flex;
