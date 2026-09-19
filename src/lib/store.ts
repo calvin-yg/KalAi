@@ -135,18 +135,42 @@ export function deleteEntry(userId: string, id: string): Promise<Entry | null> {
   });
 }
 
+/** Insert or update a weigh-in for the given date, keeping the list sorted. */
+function mergeWeighIn(user: UserRecord, weighIn: WeighIn): void {
+  const existing = user.weighIns.find((w) => w.date === weighIn.date);
+  if (existing) {
+    existing.weightKg = weighIn.weightKg;
+  } else {
+    user.weighIns.push(weighIn);
+    user.weighIns.sort((a, b) => a.date.localeCompare(b.date));
+  }
+}
+
 export function recordWeighIn(userId: string, weighIn: WeighIn): Promise<WeighIn> {
   return mutate((db) => {
     const user = userIn(db, userId);
-    const existing = user.weighIns.find((w) => w.date === weighIn.date);
-    if (existing) {
-      existing.weightKg = weighIn.weightKg;
-    } else {
-      user.weighIns.push(weighIn);
-      user.weighIns.sort((a, b) => a.date.localeCompare(b.date));
-    }
+    mergeWeighIn(user, weighIn);
     if (user.profile) user.profile.weightKg = weighIn.weightKg;
     return weighIn;
+  });
+}
+
+/**
+ * Read-modify-write a profile in one atomic step, so a concurrent request for
+ * the same user can't read the same "existing" snapshot and silently clobber
+ * this write. `compute` gets the current profile (or null) and returns the
+ * next one, plus an optional weigh-in to merge in the same step.
+ */
+export function upsertProfile(
+  userId: string,
+  compute: (existing: Profile | null) => { profile: Profile; weighIn?: WeighIn },
+): Promise<Profile> {
+  return mutate((db) => {
+    const user = userIn(db, userId);
+    const { profile, weighIn } = compute(user.profile);
+    user.profile = profile;
+    if (weighIn) mergeWeighIn(user, weighIn);
+    return profile;
   });
 }
 

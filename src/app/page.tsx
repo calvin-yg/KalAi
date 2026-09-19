@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CaptureSheet } from "@/components/CaptureSheet";
@@ -71,7 +71,16 @@ export default function Home() {
   const [capturing, setCapturing] = useState(false);
   const [viewing, setViewing] = useState<Entry | null>(null);
 
+  /**
+   * Guards against out-of-order responses: switching profiles fires a new
+   * `load()` without waiting for a prior one to finish, and on a slow
+   * connection an older request can resolve after a newer one. Whichever
+   * call is current when its response lands wins; a stale one is dropped.
+   */
+  const loadId = useRef(0);
+
   const load = useCallback(async () => {
+    const id = ++loadId.current;
     setLoadError(null);
     setUserId(currentUser());
     try {
@@ -81,6 +90,7 @@ export default function Home() {
         api.entries(range),
         api.users(),
       ]);
+      if (id !== loadId.current) return;
       setUsers(usersResult.users);
       if (!profileResult.profile) {
         router.replace("/onboarding");
@@ -94,6 +104,7 @@ export default function Home() {
       setLoadedRange(range);
       setLoading(false);
     } catch (caught) {
+      if (id !== loadId.current) return;
       // Without this the screen would sit on the spinner indefinitely.
       setLoadError(
         caught instanceof Error ? caught.message : "Could not load your day.",

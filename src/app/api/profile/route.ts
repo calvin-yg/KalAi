@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readUser, recordWeighIn, saveProfile } from "@/lib/store";
+import { readUser, recordWeighIn, upsertProfile } from "@/lib/store";
 import { userIdFrom } from "@/lib/session";
 import { readJson } from "@/lib/http";
 import { errorResponse } from "@/lib/responses";
@@ -40,48 +40,57 @@ export async function POST(request: Request) {
     return errorResponse(error, "Could not read that request.");
   }
 
-  const existing = (await readUser(userId)).profile;
   const thisYear = new Date().getFullYear();
 
-  const activity = (
-    typeof body.activity === "string" && body.activity in ACTIVITY_FACTORS
-      ? body.activity
-      : (existing?.activity ?? "light")
-  ) as ActivityLevel;
+  // Computed inside a single atomic store operation, so a concurrent request
+  // for the same user reads and writes against the same snapshot rather than
+  // racing this one — see upsertProfile's doc comment.
+  const profile = await upsertProfile(userId, (existing) => {
+    const activity = (
+      typeof body.activity === "string" && body.activity in ACTIVITY_FACTORS
+        ? body.activity
+        : (existing?.activity ?? "light")
+    ) as ActivityLevel;
 
-  const customCaloriesRaw = body.customCalories;
-  const customCalories =
-    customCaloriesRaw === null || customCaloriesRaw === ""
-      ? null
-      : customCaloriesRaw === undefined
-        ? (existing?.customCalories ?? null)
-        : clamp(Number(customCaloriesRaw), 800, 8000, 2000);
+    const customCaloriesRaw = body.customCalories;
+    const customCalories =
+      customCaloriesRaw === null || customCaloriesRaw === ""
+        ? null
+        : customCaloriesRaw === undefined
+          ? (existing?.customCalories ?? null)
+          : clamp(Number(customCaloriesRaw), 800, 8000, 2000);
 
-  const profile: Profile = {
-    name: (typeof body.name === "string" ? body.name : (existing?.name ?? "")).slice(0, 60),
-    sex: SEXES.includes(body.sex as Sex) ? (body.sex as Sex) : (existing?.sex ?? "female"),
-    birthYear: Math.round(
-      clamp(Number(body.birthYear), thisYear - 100, thisYear - 12, existing?.birthYear ?? 1990),
-    ),
-    heightCm: Math.round(clamp(Number(body.heightCm), 120, 230, existing?.heightCm ?? 170)),
-    weightKg: Number(clamp(Number(body.weightKg), 30, 300, existing?.weightKg ?? 70).toFixed(1)),
-    activity,
-    goal: GOALS.includes(body.goal as GoalType)
-      ? (body.goal as GoalType)
-      : (existing?.goal ?? "maintain"),
-    rateKgPerWeek: Number(
-      clamp(Math.abs(Number(body.rateKgPerWeek)), 0, 1, existing?.rateKgPerWeek ?? 0.5).toFixed(2),
-    ),
-    customCalories,
-    createdAt: existing?.createdAt ?? new Date().toISOString(),
-  };
+    const next: Profile = {
+      name: (typeof body.name === "string" ? body.name : (existing?.name ?? "")).slice(0, 60),
+      sex: SEXES.includes(body.sex as Sex) ? (body.sex as Sex) : (existing?.sex ?? "female"),
+      birthYear: Math.round(
+        clamp(Number(body.birthYear), thisYear - 100, thisYear - 12, existing?.birthYear ?? 1990),
+      ),
+      heightCm: Math.round(clamp(Number(body.heightCm), 120, 230, existing?.heightCm ?? 170)),
+      weightKg: Number(
+        clamp(Number(body.weightKg), 30, 300, existing?.weightKg ?? 70).toFixed(1),
+      ),
+      activity,
+      goal: GOALS.includes(body.goal as GoalType)
+        ? (body.goal as GoalType)
+        : (existing?.goal ?? "maintain"),
+      rateKgPerWeek: Number(
+        clamp(Math.abs(Number(body.rateKgPerWeek)), 0, 1, existing?.rateKgPerWeek ?? 0.5).toFixed(
+          2,
+        ),
+      ),
+      customCalories,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
 
-  await saveProfile(userId, profile);
+    // A new starting weight is also today's weigh-in.
+    const weighIn =
+      !existing || existing.weightKg !== next.weightKg
+        ? { date: toDateKey(), weightKg: next.weightKg }
+        : undefined;
 
-  // A new starting weight is also today's weigh-in.
-  if (!existing || existing.weightKg !== profile.weightKg) {
-    await recordWeighIn(userId, { date: toDateKey(), weightKg: profile.weightKg });
-  }
+    return { profile: next, weighIn };
+  });
 
   return NextResponse.json({ profile, targets: dailyTargets(profile) });
 }
