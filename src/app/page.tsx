@@ -201,9 +201,7 @@ export default function Home() {
   return (
     <main className="app">
       <header className="topbar">
-        <div className="brand">
-          KalAi <span>photo tracking</span>
-        </div>
+        <div className="brand">KalAi</div>
         <div style={{ display: "flex", gap: 8 }}>
           <span className="streak" title="Consecutive days logged">
             🔥 {streak}
